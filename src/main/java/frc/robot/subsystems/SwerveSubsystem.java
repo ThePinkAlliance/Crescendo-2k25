@@ -31,6 +31,7 @@ import frc.robot.subsystems.drive.SwerveModule;
 import frc.robot.subsystems.drive.modules.WPI_SwerveModule;
 import org.littletonrobotics.junction.Logger;
 
+@Deprecated
 public class SwerveSubsystem extends SubsystemBase {
 
   public SwerveModule frontLeftModule;

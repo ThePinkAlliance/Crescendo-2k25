@@ -109,12 +109,28 @@ public class RobotContainer {
   private void configureBindings() {
     drivetrain.setDefaultCommand(
         // Drivetrain will execute this command periodically
-        drivetrain.applyRequest(() -> drive.withVelocityX((-joystick.getRawAxis(1) * MaxSpeed) * SPEED_PROPORTION) // Drive
-                                                                                                                   // forward
-                                                                                                                   // with
-            // negative Y (forward)
-            .withVelocityY((-joystick.getRawAxis(0) * MaxSpeed) * SPEED_PROPORTION) // Drive left with negative X (left)
-            .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+        /**
+         * The joystick axies are swapped with drivetrain ones becayse wpi treats the +y
+         * as left-side+ and +x as +forward
+         * 
+         * Keep in mind because the drivetrain is using this new coordinate system the
+         * vision subsystem might not work.
+         * 
+         * https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html
+         */
+        drivetrain.applyRequest(
+            () -> drive.withVelocityX((-joystick.getRawAxis(JoystickMap.LEFT_Y_AXIS) * MaxSpeed) * SPEED_PROPORTION) // Drive
+                // forward
+                // with
+                // negative Y (forward)
+                .withVelocityY((-joystick.getRawAxis(JoystickMap.LEFT_X_AXIS) * MaxSpeed) * SPEED_PROPORTION) // Drive
+                                                                                                              // left
+                                                                                                              // with
+                                                                                                              // negative
+                                                                                                              // X
+                                                                                                              // (left)
+                .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X
+                                                                            // (left)
         ));
 
     new JoystickButton(baseJoystick, JoystickMap.RIGHT_BUMPER)
