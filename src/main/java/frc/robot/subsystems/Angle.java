@@ -12,6 +12,8 @@ import com.ctre.phoenix6.hardware.CANcoder;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase.ControlType;
+import com.revrobotics.spark.SparkBase.PersistMode;
+import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
@@ -40,12 +42,14 @@ public class Angle extends SubsystemBase {
     SparkMaxConfig sparkConfig = new SparkMaxConfig();
 
     sparkConfig.idleMode(IdleMode.kCoast);
-    sparkConfig.encoder.inverted(true);
+    // sparkConfig.encoder.inverted(true);
 
     this.m_relEncoder = m_motor.getEncoder();
 
-    sparkConfig.closedLoop.pidf(0.09, 0, 0, 0.001);
+    sparkConfig.inverted(true);
+    sparkConfig.closedLoop.pidf(0.5, 0, 0, 0.001);
     sparkConfig.closedLoop.outputRange(-1, 1);
+    this.m_motor.configure(sparkConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
   }
 
   @Override
@@ -70,7 +74,7 @@ public class Angle extends SubsystemBase {
   }
 
   public double getCancoderAngle() {
-    return (m_angleCancoder.getAbsolutePosition().getValueAsDouble() * 360) - 1.6; // 4.7
+    return ((m_angleCancoder.getAbsolutePosition().getValueAsDouble() - 0.08056640625) * 360);
   }
 
   public void setPower(double power) {

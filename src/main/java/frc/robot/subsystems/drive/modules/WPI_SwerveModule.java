@@ -13,6 +13,7 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.signals.SensorDirectionValue;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -35,6 +36,7 @@ public class WPI_SwerveModule implements SwerveModule {
   private CANcoder canCoder;
   public static final double WARNINGTEMP = 55.0;
   private double absoluteEncoderOffsetRad;
+  private boolean invertSteer;
 
   public WPI_SwerveModule(int steerId, int driveId, int canCoderId, boolean invertDrive, boolean invertSteer,
       double absoluteEncoderOffsetRad,
@@ -70,6 +72,10 @@ public class WPI_SwerveModule implements SwerveModule {
     this.driveMotor.setNeutralMode(NeutralModeValue.Brake);
 
     CANcoderConfiguration config = new CANcoderConfiguration();
+
+    config.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 0.5;
+    config.MagnetSensor.SensorDirection = invertSteer ? SensorDirectionValue.Clockwise_Positive
+        : SensorDirectionValue.CounterClockwise_Positive;
 
     this.canCoder.getConfigurator().apply(config);
 

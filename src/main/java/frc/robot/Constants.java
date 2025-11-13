@@ -43,7 +43,7 @@ public class Constants {
   }
 
   public static final class TurretConstants {
-    public static final double REVERSE_STARTING_POS = 62.71;
+    public static final double REVERSE_STARTING_POS = 0;
     // public static final double REVERSE_STARTING_POS = 0;
     public static final double REVERSE_SHOOTING_POS = 44.76;
   }
@@ -99,8 +99,8 @@ public class Constants {
 
     public static final boolean kFrontLeftTurningReversed = false;
     public static final boolean kBackLeftTurningReversed = false;
-    public static final boolean kFrontRightTurningReversed = false;
-    public static final boolean kBackRightTurningReversed = false;
+    public static final boolean kFrontRightTurningReversed = true;
+    public static final boolean kBackRightTurningReversed = true;
 
     public static final boolean kFrontLeftDriveEncoderReversed = false;
     public static final boolean kBackLeftDriveEncoderReversed = false;
@@ -121,10 +121,10 @@ public class Constants {
      * These values where determined by lining up all the wheels and recording the
      * outputed positions.
      */
-    public static final double kFrontLeftDriveAbsoluteEncoderOffsetRad = 0.17333;// -1.52;// 2.688;
-    public static final double kBackLeftDriveAbsoluteEncoderOffsetRad = 0.67955;// -1.7185;
-    public static final double kFrontRightDriveAbsoluteEncoderOffsetRad = -2.16904;// 0.182;
-    public static final double kBackRightDriveAbsoluteEncoderOffsetRad = -1.1919;// -2.519;
+    public static final double kFrontLeftDriveAbsoluteEncoderOffsetRad = 0.15186;// 0.17333;// -1.52;// 2.688;
+    public static final double kBackLeftDriveAbsoluteEncoderOffsetRad = 0.6366;// 0.67955;// -1.7185;
+    public static final double kFrontRightDriveAbsoluteEncoderOffsetRad = -1.0293;// 2.16904;// 0.182;
+    public static final double kBackRightDriveAbsoluteEncoderOffsetRad = -1.9174;// 1.1919;// -2.519;
 
     public static final double kPhysicalMaxSpeedMetersPerSecond = 4.437;// 2.91;
     public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = 18; // 18 rad/sec

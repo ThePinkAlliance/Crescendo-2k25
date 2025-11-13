@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -15,19 +17,21 @@ import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.POVButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.JoystickMap;
-import frc.robot.commands.climber.ClimbSequence;
 import frc.robot.commands.shooter.ShootNoteAuto;
+import frc.robot.commands.shooter.ShootNoteAuto2;
 import frc.robot.commands.shooter.ShootNoteTargetVisible;
+import frc.robot.commands.shooter.SmartLuanch;
+import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Angle;
-import frc.robot.subsystems.ClimberR2;
 import frc.robot.subsystems.Shooter;
-import frc.robot.commands.drive.JoystickDrive;
 import frc.robot.commands.intake.AmpShot;
 import frc.robot.commands.intake.CollectNoteV2;
 import frc.robot.subsystems.SwerveSubsystem;
 import frc.robot.subsystems.TurretSubsystem;
 import frc.robot.subsystems.VisionSubsystem;
+import frc.robot.subsystems.drive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.intake.Intake;
+import static edu.wpi.first.units.Units.*;
 
 /**
  * This class is where the bulk of the robot should be declared. Since
@@ -40,7 +44,7 @@ import frc.robot.subsystems.intake.Intake;
  */
 public class RobotContainer {
 
-  public SwerveSubsystem swerveSubsystem;
+  // public SwerveSubsystem swerveSubsystem;
   public Joystick baseJoystick;
   public Joystick towerJoystick;
   public VisionSubsystem m_visionSubsystem;
@@ -49,14 +53,31 @@ public class RobotContainer {
   private Angle m_angle = new Angle();
   private Intake m_intake = new Intake();
   private TurretSubsystem m_turret = new TurretSubsystem();
-  private ClimberR2 climber_r2 = new ClimberR2();
   private SendableChooser<Command> chooser;
+
+  private double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+  private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max
+                                                                                    // angular velocity
+
+  /* Setting up bindings for necessary control of the swerve drive platform */
+  private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
+      .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1).withDesaturateWheelSpeeds(true) // Add
+                                                                                                                 // a
+                                                                                                                 // 10%
+                                                                                                                 // deadband
+      .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
+  private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
+  private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
+
+  private final double SPEED_PROPORTION = 0.25;
+  private final CommandXboxController joystick = new CommandXboxController(0);
+
+  public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
    */
   public RobotContainer() {
-    swerveSubsystem = new SwerveSubsystem(Constants.DriveConstants.kDriveKinematics);
     m_visionSubsystem = new VisionSubsystem();
     baseJoystick = new Joystick(0);
     towerJoystick = new Joystick(1);
@@ -86,75 +107,35 @@ public class RobotContainer {
    */
 
   private void configureBindings() {
-    swerveSubsystem
-        .setDefaultCommand(
-            new JoystickDrive(swerveSubsystem,
-                () -> baseJoystick.getRawAxis(JoystickMap.LEFT_X_AXIS),
-                () -> baseJoystick.getRawAxis(JoystickMap.LEFT_Y_AXIS),
-                () -> baseJoystick.getRawAxis(JoystickMap.RIGHT_X_AXIS)));
+    drivetrain.setDefaultCommand(
+        // Drivetrain will execute this command periodically
+        drivetrain.applyRequest(() -> drive.withVelocityX((-joystick.getRawAxis(1) * MaxSpeed) * SPEED_PROPORTION) // Drive
+                                                                                                                   // forward
+                                                                                                                   // with
+            // negative Y (forward)
+            .withVelocityY((-joystick.getRawAxis(0) * MaxSpeed) * SPEED_PROPORTION) // Drive left with negative X (left)
+            .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+        ));
 
-    new JoystickButton(baseJoystick, JoystickMap.BUTTON_BACK)
-        .onTrue(Commands.runOnce(() -> swerveSubsystem.resetGyro()));
-    new JoystickButton(baseJoystick, JoystickMap.BUTTON_B).onTrue(new AmpShot(m_intake, swerveSubsystem));
     new JoystickButton(baseJoystick, JoystickMap.RIGHT_BUMPER)
-        .whileTrue(new CollectNoteV2(m_intake, m_shooter, m_angle, m_turret)).onFalse(
+        .whileTrue(m_angle.setAngleCommandNew(15).andThen(m_shooter.loadNoteUntilFound2(1500))).onFalse(
             m_intake.setCollectorPower(0));
-    new JoystickButton(baseJoystick, JoystickMap.LEFT_BUMPER).onTrue(m_intake.setAnglePosition(0));
-    new Trigger(() -> baseJoystick.getRawAxis(JoystickMap.RIGHT_TRIGGER) > 0.05)
-        .whileTrue(m_intake.setCollectorPower(
-            -0.95))
-        .onFalse(m_intake.setCollectorPower(0));
+    new JoystickButton(baseJoystick, JoystickMap.LEFT_BUMPER).whileTrue(m_angle.setAngleCommandNew(2));
 
-    // Tower
-    // A BUTTON without the conditional check on a visible apriltag
-    // new JoystickButton(towerJoystick, JoystickMap.BUTTON_A)
-    // .onTrue(new ParallelCommandGroup(
-    // new TurretVectoring(m_turret, m_visionSubsystem, () ->
-    // swerveSubsystem.getHeading()),
-    // new ShootNote(m_shooter, m_angle, m_turret,
-    // () -> m_visionSubsystem.UncorrectedDistance()))
-    // .andThen(
-    // m_turret.setTargetPositionRaw(0)
-    // ));
-
-    // Alternative to non-target visible method
-    new JoystickButton(towerJoystick, JoystickMap.BUTTON_A).onTrue(new ShootNoteTargetVisible(
-        m_shooter, m_angle, m_turret, m_visionSubsystem, swerveSubsystem,
-        () -> m_visionSubsystem.UncorrectedDistance()).andThen(m_turret.setTargetPositionRaw(0)));
-
-    new JoystickButton(towerJoystick, JoystickMap.BUTTON_X)
-        .whileTrue(new ShootNoteAuto(
-            31.5, -4100, m_shooter, m_angle,
+    // 4100
+    new JoystickButton(baseJoystick, JoystickMap.BUTTON_X)
+        .whileTrue(new ShootNoteAuto2(
+            31.5, -1200, m_shooter, m_angle,
             m_visionSubsystem).compose());
-    new JoystickButton(towerJoystick, JoystickMap.BUTTON_Y)
-        .whileTrue(new ShootNoteAuto(45, -2800, m_shooter, m_angle,
+    new JoystickButton(baseJoystick, JoystickMap.BUTTON_Y)
+        .whileTrue(new ShootNoteAuto2(45, -1200, m_shooter, m_angle,
             m_visionSubsystem).compose());
-    new JoystickButton(towerJoystick, JoystickMap.BUTTON_B)
-        .whileTrue(new ShootNoteAuto(49.5, -3800, m_shooter, m_angle,
+    new JoystickButton(baseJoystick, JoystickMap.BUTTON_B)
+        .whileTrue(new ShootNoteAuto2(49.5, -1200, m_shooter, m_angle,
             m_visionSubsystem).compose());
 
-    // Climber Sequence - assumes driver has already extended the climber and
-    // position the hooks over the chain
-    new JoystickButton(towerJoystick, JoystickMap.RIGHT_BUMPER)
-        .onTrue(new ClimbSequence(m_intake, m_turret, climber_r2));
-
-    new JoystickButton(towerJoystick, JoystickMap.LEFT_BUMPER)
-        .onTrue(climber_r2.travelToClimberPos(64, 74));
-
-    climber_r2.setDefaultCommand(Commands.run(() -> {
-      double left = towerJoystick.getRawAxis(JoystickMap.LEFT_Y_AXIS) * -1;
-      double right = towerJoystick.getRawAxis(JoystickMap.RIGHT_Y_AXIS) * -1;
-
-      if (Math.abs(right) > 0.5) {
-        right = 0.5;
-      }
-
-      if (Math.abs(left) > 0.5) {
-        left = 0.5;
-      }
-
-      this.climber_r2.testPower(right, left);
-    }, climber_r2));
+    new JoystickButton(baseJoystick, JoystickMap.BUTTON_A)
+        .whileTrue(new SmartLuanch(m_shooter).andThen(m_angle.setAngleCommandNew(2)));
 
     new Trigger(() -> towerJoystick.getRawAxis(
         JoystickMap.RIGHT_TRIGGER) >= 0.05).onTrue(m_angle.setAngleCommandNew(2));
@@ -176,7 +157,7 @@ public class RobotContainer {
 
   public void setupTeleop() {
     this.m_turret.setBrakeMode(IdleMode.kBrake);
-    swerveSubsystem.resetGyro();
+    // swerveSubsystem.resetGyro();
   }
 
   /**

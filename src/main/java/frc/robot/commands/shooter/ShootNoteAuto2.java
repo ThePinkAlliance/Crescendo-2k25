@@ -13,11 +13,11 @@ import frc.robot.subsystems.VisionSubsystem;
 // NOTE:  Consider using this command inline, rather than writing a subclass.  For more
 // information, see:
 // https://docs.wpilib.org/en/stable/docs/software/commandbased/convenience-features.html
-public class ShootNoteAuto extends SequentialCommandGroup {
+public class ShootNoteAuto2 extends SequentialCommandGroup {
   Shooter shooter;
 
   /** Creates a new ShootNoteAuto. */
-  public ShootNoteAuto(double desired_angle, double desired_rpm, Shooter shooter, Angle angle,
+  public ShootNoteAuto2(double desired_angle, double desired_rpm, Shooter shooter, Angle angle,
       VisionSubsystem visionSubsystem) {
     // Add your commands in the addCommands() call, e.g.
     // addCommands(new FooCommand(), new BarCommand());
@@ -26,9 +26,7 @@ public class ShootNoteAuto extends SequentialCommandGroup {
 
     addCommands(
         shooter.rampUp2(desired_rpm).alongWith(angle.GotoAngle(
-            desired_angle)),
-        new SmartLuanch(shooter),
-        shooter.stopShooter(), angle.setAngleCommandNew(2));
+            desired_angle)));
   }
 
   public Command compose() {
